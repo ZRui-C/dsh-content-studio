@@ -14,7 +14,7 @@
 - 🃏 `content_md_to_cards` —— Markdown → 小红书图文卡片（Chrome 无头渲染）：封面卡 + 按 H1/H2 分节成卡，1242×1660（3:4），**5 套配色 × 4 种版式**，支持 `![描述](路径)` 插图与带可读性遮罩的背景图
 - 🌐 `content_md_to_html` —— 自包含排版 HTML，用于预览、CSDN、公众号粘贴
 - 📤 `content_publish_devto` —— dev.to（Forem）官方 API 发布（草稿/直发）
-- 👀 `content_review_open / status / refresh / close` —— 持久化的人工审阅闸门：草稿落盘 `~/.dsh/content-studio-output/review/draft.json`，浏览器浮动审阅面板**实时预览**卡片，用户可改文字、配色、版式与发布文案，然后批准或打回
+- 👀 `content_review_open / status / refresh / close` —— 持久化的人工审阅闸门：草稿落盘 `~/.dsh/content-studio-output/review/draft.json`，浏览器浮动审阅面板（**审阅 / 发布 / 设置** 三个页签）**实时预览**卡片，用户可改文字、配色、版式与发布文案，然后批准或打回
 - 🔌 Playwright MCP（`mcp__playwright__*`）—— 网页截图、会话录屏、UI 自动化（系统 Chrome）
 - 📕 xhs-mcp（`mcp__xhs__*`）—— 小红书登录、图文/视频发布、搜索
 

@@ -14,7 +14,7 @@ Screenshots, screen recording, Markdown → Xiaohongshu (XHS) image cards, dev.t
 - 🃏 `content_md_to_cards` — Markdown → XHS image cards rendered by headless Chrome: cover card + one card per H1/H2 section at 1242×1660 (3:4), **5 palettes × 4 layouts**, photos via `![alt](path)`, background images with a readability overlay
 - 🌐 `content_md_to_html` — self-contained styled HTML for preview, CSDN, or the WeChat editor
 - 📤 `content_publish_devto` — official dev.to (Forem) API publishing (draft or publish)
-- 👀 `content_review_open / status / refresh / close` — a durable human review gate: the draft persists to `~/.dsh/content-studio-output/review/draft.json`, and a floating review panel in the browser shows **live card previews** where the user edits text, palette, layout, and the publish copy — then approves or rejects
+- 👀 `content_review_open / status / refresh / close` — a durable human review gate: the draft persists to `~/.dsh/content-studio-output/review/draft.json`, and a tabbed floating review panel (**Review / Publish / Settings**) shows **live card previews** where the user edits text, palette, layout, and the publish copy — then approves or rejects
 - 🔌 Playwright MCP (`mcp__playwright__*`) — webpage screenshots, session video, UI automation (system Chrome channel)
 - 📕 xhs-mcp (`mcp__xhs__*`) — Xiaohongshu login, image/video publishing, search
 

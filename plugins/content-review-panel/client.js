@@ -5,6 +5,9 @@ const CSS = `
 .csr-badge{font-size:11px;font-weight:700;color:#fff;padding:3px 10px;border-radius:999px}
 .csr-mini{background:transparent;border:1px solid var(--dsw-alias-border-l2,#c9c9d6);color:var(--dsw-alias-label-secondary,#5f6b76);border-radius:8px;padding:3px 8px;font-size:11px;cursor:pointer}
 .csr-body{display:flex;flex-direction:column;gap:10px;padding:12px;overflow-y:auto;max-height:calc(80vh - 44px)}
+.csr-tabs{display:flex;gap:6px}
+.csr-tab{flex:1;padding:6px 0;border-radius:8px;font-size:12px;font-weight:700;border:1px solid var(--dsw-alias-border-l2,#c9c9d6);background:var(--dsw-alias-bg-layer-2,#f4f4f7);color:var(--dsw-alias-label-secondary,#5f6b76);cursor:pointer;text-align:center}
+.csr-tab-active{background:#3a5bff;color:#ffffff;border-color:#3a5bff}
 .csr-thumbs{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px}
 .csr-thumbbox{width:92px;min-width:92px;height:124px;border-radius:8px;border:2px solid var(--dsw-alias-border-l2,#d0d0dc);overflow:hidden;cursor:zoom-in;flex-shrink:0;background:var(--dsw-alias-bg-layer-2,#f4f4f7)}
 .csr-thumbbox:hover{border-color:#ff2e4d}
@@ -21,13 +24,10 @@ const CSS = `
 .csr-save{background:#3a5bff}
 .csr-approve{background:#18a058}
 .csr-reject{background:#d03050}
-.csr-btn-mini2{flex:0 0 auto;padding:6px 10px;border-radius:8px;font-size:11px;font-weight:600;background:var(--dsw-alias-bg-layer-2,#f4f4f7);color:var(--dsw-alias-label-primary,#1f2328);border:1px solid var(--dsw-alias-border-l2,#c9c9d6);cursor:pointer}
-.csr-btn-mini2:hover{border-color:#ff2e4d}
 .csr-hint{font-size:11px;color:var(--dsw-alias-label-secondary,#6a737d);line-height:1.5;background:var(--dsw-alias-bg-layer-2,#f4f4f7);border-radius:8px;padding:8px 10px}
 .csr-preview{position:fixed;inset:0;background:rgba(0,0,0,.82);display:flex;align-items:center;justify-content:center;z-index:2147483001;cursor:zoom-out}
 .csr-preview-box{border-radius:12px;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,.7)}
 
-/* 卡片实时预览：配色（5 套） */
 .csx{position:relative;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Hiragino Sans GB','Microsoft YaHei','Noto Sans CJK SC','Helvetica Neue',Arial,sans-serif;padding:96px;box-sizing:border-box}
 .csx-soft{background:#fdf3ec;color:#3d2b28;--csx-accent:#ff2e4d;--csx-soft:#ffe8ec;--csx-muted:#9a7f76}
 .csx-dark{background:#191926;color:#f2eef5;--csx-accent:#ff7a8a;--csx-soft:#2b2b3d;--csx-muted:#9d96b0;--csx-bgoverlay:rgba(16,16,26,.72)}
@@ -57,13 +57,9 @@ const CSS = `
 .csx-cover-badge{margin-top:60px;align-self:flex-start;background:var(--csx-accent);color:#ffffff;font-size:36px;font-weight:700;padding:16px 36px;border-radius:999px}
 .csx-footer{position:absolute;bottom:56px;left:96px;right:96px;font-size:30px;color:var(--csx-muted);display:flex;justify-content:space-between;align-items:center}
 .csx-footer-tag{background:var(--csx-soft);color:var(--csx-accent);font-weight:700;padding:8px 22px;border-radius:999px}
-
-/* 背景图：全幅覆盖 + 主题遮罩保证可读性 */
 .csx-hasbg{background-size:cover;background-position:center}
 .csx-hasbg::before{content:'';position:absolute;inset:0;background:var(--csx-bgoverlay,rgba(255,255,255,.78));pointer-events:none}
 .csx-hasbg>*{position:relative;z-index:1}
-
-/* 版式（4 种）：杂志 / 大字报 / 手账 */
 .csx-magazine h1{border-left:none;padding-left:0;text-align:center;font-family:'Songti SC','STSong','SimSun',serif;margin-bottom:8px}
 .csx-magazine h1::after{content:'';display:block;width:120px;height:8px;background:var(--csx-accent);margin:28px auto 0;border-radius:4px}
 .csx-magazine h2{text-align:center;font-family:'Songti SC','STSong','SimSun',serif}
@@ -182,6 +178,11 @@ return {
 
     const LABEL = { draft: '待审阅', edited: '已修改', approved: '已批准', rejected: '已打回' }
     const COLOR = { draft: '#d89a1f', edited: '#3a5bff', approved: '#18a058', rejected: '#d03050' }
+    const TABS = [
+      { id: 'review', label: '审阅' },
+      { id: 'publish', label: '发布' },
+      { id: 'settings', label: '设置' },
+    ]
     let lastRevision = 0
 
     function CardBox(props) {
@@ -207,6 +208,7 @@ return {
 
     function Panel() {
       const [draft, setDraft] = React.useState(null)
+      const [tab, setTab] = React.useState('review')
       const [md, setMd] = React.useState('')
       const [coverTitle, setCoverTitle] = React.useState('')
       const [coverSub, setCoverSub] = React.useState('')
@@ -238,13 +240,13 @@ return {
             return
           }
           if (d) lastRevision = d.revision
-          setDraft(d)
           try {
             const k = await host.call('get-keys', {})
             if (k) setKeyStatus({ geminiSet: Boolean(k.geminiSet), devtoSet: Boolean(k.devtoSet) })
           } catch (error) {
             // keys unavailable — keep last status
           }
+          setDraft(d)
           if (d) {
             setMd((prev) => (prev === '' ? (d.markdown ?? '') : prev))
             setCoverTitle((prev) => (prev === '' ? (d.cover && d.cover.title ? d.cover.title : '') : prev))
@@ -324,6 +326,96 @@ return {
         previews.push({ key: 's' + i, title: s.title || ('卡片 ' + (i + 1)), html: sectionHtml(s, footer, styleName, layoutName) })
       })
 
+      const tabBar = React.createElement('div', { className: 'csr-tabs' },
+        TABS.map((t) => React.createElement('div', {
+          key: t.id,
+          className: 'csr-tab' + (tab === t.id ? ' csr-tab-active' : ''),
+          onClick: () => setTab(t.id),
+        }, t.label)))
+
+      const reviewTab = React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '10px' } },
+        React.createElement('div', { className: 'csr-label-row' },
+          React.createElement('span', { className: 'csr-label' }, '实时预览 · ' + previews.length + ' 张'),
+          React.createElement('span', { className: 'csr-count' }, '点缩略图看大图'),
+        ),
+        previews.length > 0
+          ? React.createElement('div', { className: 'csr-thumbs' },
+              previews.map((p) => React.createElement(CardBox, {
+                key: p.key,
+                title: p.title,
+                html: p.html,
+                dims: dims,
+                scale: thumbScale,
+                styleName: styleName,
+                layoutName: layoutName,
+                bgImage: bgImage,
+                onZoom: () => setZoom({ key: p.key, html: p.html, dims: dims, styleName: styleName, layoutName: layoutName, bgImage: bgImage }),
+              })))
+          : null,
+        React.createElement('div', { className: 'csr-row' },
+          React.createElement('input', { className: 'csr-input', style: { flex: '0 0 52px' }, value: coverEmoji, placeholder: '🎬', onChange: (e) => setCoverEmoji(e.target.value) }),
+          React.createElement('input', { className: 'csr-input', value: coverTitle, placeholder: '封面标题', onChange: (e) => setCoverTitle(e.target.value) }),
+          React.createElement('input', { className: 'csr-input', value: coverSub, placeholder: '封面副标题', onChange: (e) => setCoverSub(e.target.value) }),
+        ),
+        React.createElement('div', { className: 'csr-row' },
+          React.createElement('select', { className: 'csr-input', value: styleName, onChange: (e) => setStyleName(e.target.value) },
+            React.createElement('option', { value: 'xhs-soft' }, '配色·奶油暖调'),
+            React.createElement('option', { value: 'xhs-dark' }, '配色·深夜暗调'),
+            React.createElement('option', { value: 'plain' }, '配色·简洁白底'),
+            React.createElement('option', { value: 'forest' }, '配色·森林墨绿'),
+            React.createElement('option', { value: 'sunset' }, '配色·落日暖橙'),
+          ),
+          React.createElement('select', { className: 'csr-input', value: layoutName, onChange: (e) => setLayoutName(e.target.value) },
+            React.createElement('option', { value: 'classic' }, '版式·经典'),
+            React.createElement('option', { value: 'magazine' }, '版式·杂志'),
+            React.createElement('option', { value: 'poster' }, '版式·大字报'),
+            React.createElement('option', { value: 'notebook' }, '版式·手账'),
+          ),
+        ),
+        React.createElement('div', { className: 'csr-row' },
+          React.createElement('input', { className: 'csr-input', value: footer, placeholder: '页脚标签', onChange: (e) => setFooter(e.target.value) }),
+          bgImage ? React.createElement('button', { className: 'csr-mini', onClick: () => setBgImage('') }, '清除背景') : null,
+        ),
+        React.createElement('textarea', { className: 'csr-textarea', value: md, placeholder: '卡片正文 Markdown（H2 分节成卡）', onChange: (e) => setMd(e.target.value) }),
+        React.createElement('div', { className: 'csr-label' }, '给 agent 的留言（可选）'),
+        React.createElement('textarea', { className: 'csr-textarea', style: { minHeight: '48px' }, value: note, placeholder: '例如：第二张标题太长，代码块换浅色', onChange: (e) => setNote(e.target.value) }),
+        React.createElement('div', { className: 'csr-row' },
+          React.createElement('button', { className: 'csr-btn csr-save', disabled: draft.status === 'approved', onClick: save }, '💾 保存修改'),
+          React.createElement('button', { className: 'csr-btn csr-approve', disabled: draft.status === 'approved', onClick: () => decide('approve') }, '✓ 批准发布'),
+          React.createElement('button', { className: 'csr-btn csr-reject', disabled: draft.status === 'rejected', onClick: () => decide('reject') }, '✗ 打回'),
+        ),
+        busy ? React.createElement('div', { className: 'csr-hint' }, busy) : null,
+        draft.status === 'approved' ? React.createElement('div', { className: 'csr-hint' }, '✅ 已批准发布。对 agent 说「继续」，它会用「发布」页的标题和正文发布。') : null,
+        draft.status === 'rejected' ? React.createElement('div', { className: 'csr-hint' }, '已打回。改完点「保存修改」，或直接对 agent 说出意见。') : null,
+        draft.status === 'draft' ? React.createElement('div', { className: 'csr-hint' }, '实时预览配色×版式；照片/背景图直接拖给 agent；发布文案在「发布」页，API Keys 在「设置」页。') : null,
+        draft.status === 'edited' ? React.createElement('div', { className: 'csr-hint' }, '已保存修改，等待 agent 重新渲染正式卡片。') : null,
+      )
+
+      const publishTab = React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '10px' } },
+        React.createElement('div', { className: 'csr-label-row' },
+          React.createElement('span', { className: 'csr-label' }, '发布文案 —— 图片之外的文字（独立）'),
+          React.createElement('span', { className: 'csr-count' }, '标题 ' + pubTitle.length + '/20'),
+        ),
+        React.createElement('input', { className: 'csr-input', value: pubTitle, placeholder: '发布标题（≤20 字，可带 emoji）', onChange: (e) => setPubTitle(e.target.value) }),
+        React.createElement('div', { className: 'csr-label-row' },
+          React.createElement('span', { className: 'csr-label' }, '笔记正文（可带 #话题#）'),
+          React.createElement('span', { className: 'csr-count' }, pubBody.length + '/1000'),
+        ),
+        React.createElement('textarea', { className: 'csr-textarea', style: { minHeight: '140px' }, value: pubBody, placeholder: '发布时附在图片下面的正文，和图片里的详细内容可以是两套话术', onChange: (e) => setPubBody(e.target.value) }),
+        React.createElement('div', { className: 'csr-hint' }, '这里的文案在「审阅」页点批准后随草稿保存；批准发布后 agent 用这里的标题/正文发帖。'),
+      )
+
+      const settingsTab = React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '10px' } },
+        React.createElement('div', { className: 'csr-label-row' },
+          React.createElement('span', { className: 'csr-label' }, 'API Keys（留空不修改）'),
+          React.createElement('span', { className: 'csr-count' }, 'Gemini ' + (keyStatus.geminiSet ? '✓' : '—') + ' · dev.to ' + (keyStatus.devtoSet ? '✓' : '—')),
+        ),
+        React.createElement('input', { className: 'csr-input', type: 'password', value: geminiInput, placeholder: 'Gemini API Key（aistudio.google.com/apikey）', onChange: (e) => setGeminiInput(e.target.value) }),
+        React.createElement('input', { className: 'csr-input', type: 'password', value: devtoInput, placeholder: 'dev.to API Key（dev.to/settings/extensions）', onChange: (e) => setDevtoInput(e.target.value) }),
+        React.createElement('button', { className: 'csr-btn csr-save', onClick: saveKeys }, '💾 保存 Keys'),
+        React.createElement('div', { className: 'csr-hint' }, 'Key 存于本机 ~/.dsh/content-studio-output/keys.json（0600），供 AI 生图与 dev.to 发布使用；界面不回显明文。'),
+      )
+
       return React.createElement('div', { className: 'csr-panel' },
         React.createElement('div', { className: 'csr-header' },
           React.createElement('span', { className: 'csr-title' }, '🖼️ XHS 图文审阅'),
@@ -333,90 +425,10 @@ return {
           ),
         ),
         collapsed ? null : React.createElement('div', { className: 'csr-body' },
-          React.createElement('div', { className: 'csr-label-row' },
-            React.createElement('span', { className: 'csr-label' }, '实时预览 · ' + previews.length + ' 张（改字/换样式即时刷新）'),
-            React.createElement('span', { className: 'csr-count' }, '点缩略图看大图'),
-          ),
-          previews.length > 0
-            ? React.createElement('div', { className: 'csr-thumbs' },
-                previews.map((p) => React.createElement(CardBox, {
-                  key: p.key,
-                  title: p.title,
-                  html: p.html,
-                  dims: dims,
-                  scale: thumbScale,
-                  styleName: styleName,
-                  layoutName: layoutName,
-                  bgImage: bgImage,
-                  onZoom: () => setZoom({ key: p.key, html: p.html, dims: dims, styleName: styleName, layoutName: layoutName, bgImage: bgImage }),
-                })))
-            : null,
-          React.createElement('div', null,
-            React.createElement('div', { className: 'csr-label' }, '① 卡片渲染 —— 决定图片里的字和图'),
-            React.createElement('div', { className: 'csr-row' },
-              React.createElement('input', { className: 'csr-input', style: { flex: '0 0 52px' }, value: coverEmoji, placeholder: '🎬', onChange: (e) => setCoverEmoji(e.target.value) }),
-              React.createElement('input', { className: 'csr-input', value: coverTitle, placeholder: '封面标题', onChange: (e) => setCoverTitle(e.target.value) }),
-              React.createElement('input', { className: 'csr-input', value: coverSub, placeholder: '封面副标题', onChange: (e) => setCoverSub(e.target.value) }),
-            ),
-            React.createElement('div', { className: 'csr-row', style: { marginTop: '6px' } },
-              React.createElement('select', { className: 'csr-input', value: styleName, onChange: (e) => setStyleName(e.target.value) },
-                React.createElement('option', { value: 'xhs-soft' }, '配色·奶油暖调'),
-                React.createElement('option', { value: 'xhs-dark' }, '配色·深夜暗调'),
-                React.createElement('option', { value: 'plain' }, '配色·简洁白底'),
-                React.createElement('option', { value: 'forest' }, '配色·森林墨绿'),
-                React.createElement('option', { value: 'sunset' }, '配色·落日暖橙'),
-              ),
-              React.createElement('select', { className: 'csr-input', value: layoutName, onChange: (e) => setLayoutName(e.target.value) },
-                React.createElement('option', { value: 'classic' }, '版式·经典'),
-                React.createElement('option', { value: 'magazine' }, '版式·杂志'),
-                React.createElement('option', { value: 'poster' }, '版式·大字报'),
-                React.createElement('option', { value: 'notebook' }, '版式·手账'),
-              ),
-            ),
-            React.createElement('div', { className: 'csr-row', style: { marginTop: '6px' } },
-              React.createElement('input', { className: 'csr-input', value: footer, placeholder: '页脚标签', onChange: (e) => setFooter(e.target.value) }),
-              bgImage ? React.createElement('button', { className: 'csr-mini', onClick: () => setBgImage('') }, '清除背景') : null,
-            ),
-            React.createElement('textarea', { className: 'csr-textarea', style: { marginTop: '6px' }, value: md, placeholder: '卡片正文 Markdown（H2 分节成卡；插图用 ![描述](路径/URL)）', onChange: (e) => setMd(e.target.value) }),
-          ),
-          React.createElement('hr', { className: 'csr-divider' }),
-          React.createElement('div', null,
-            React.createElement('div', { className: 'csr-label-row' },
-              React.createElement('span', { className: 'csr-label' }, '② 发布文案 —— 图片之外的文字（独立）'),
-              React.createElement('span', { className: 'csr-count' }, '标题 ' + pubTitle.length + '/20'),
-            ),
-            React.createElement('input', { className: 'csr-input', value: pubTitle, placeholder: '发布标题（≤20 字，可带 emoji）', onChange: (e) => setPubTitle(e.target.value) }),
-            React.createElement('div', { className: 'csr-label-row', style: { marginTop: '6px' } },
-              React.createElement('span', { className: 'csr-label' }, '笔记正文（可带 #话题#）'),
-              React.createElement('span', { className: 'csr-count' }, pubBody.length + '/1000'),
-            ),
-            React.createElement('textarea', { className: 'csr-textarea', style: { minHeight: '76px' }, value: pubBody, placeholder: '发布时附在图片下面的正文，和图片里的详细内容可以是两套话术', onChange: (e) => setPubBody(e.target.value) }),
-          ),
-          React.createElement('hr', { className: 'csr-divider' }),
-          React.createElement('div', null,
-            React.createElement('div', { className: 'csr-label-row' },
-              React.createElement('span', { className: 'csr-label' }, '③ API Keys（可选，留空不修改）'),
-              React.createElement('span', { className: 'csr-count' }, 'Gemini ' + (keyStatus.geminiSet ? '✓' : '—') + ' · dev.to ' + (keyStatus.devtoSet ? '✓' : '—')),
-            ),
-            React.createElement('input', { className: 'csr-input', type: 'password', value: geminiInput, placeholder: 'Gemini API Key（aistudio.google.com/apikey）', onChange: (e) => setGeminiInput(e.target.value) }),
-            React.createElement('input', { className: 'csr-input', style: { marginTop: '6px' }, type: 'password', value: devtoInput, placeholder: 'dev.to API Key（dev.to/settings/extensions）', onChange: (e) => setDevtoInput(e.target.value) }),
-            React.createElement('button', { className: 'csr-btn csr-save', style: { marginTop: '6px' }, onClick: saveKeys }, '💾 保存 Keys'),
-          ),
-          React.createElement('hr', { className: 'csr-divider' }),
-          React.createElement('div', null,
-            React.createElement('div', { className: 'csr-label' }, '给 agent 的留言（可选）'),
-            React.createElement('textarea', { className: 'csr-textarea', style: { minHeight: '48px' }, value: note, placeholder: '例如：第二张标题太长，代码块换浅色', onChange: (e) => setNote(e.target.value) }),
-          ),
-          React.createElement('div', { className: 'csr-row' },
-            React.createElement('button', { className: 'csr-btn csr-save', disabled: draft.status === 'approved', onClick: save }, '💾 保存修改'),
-            React.createElement('button', { className: 'csr-btn csr-approve', disabled: draft.status === 'approved', onClick: () => decide('approve') }, '✓ 批准发布'),
-            React.createElement('button', { className: 'csr-btn csr-reject', disabled: draft.status === 'rejected', onClick: () => decide('reject') }, '✗ 打回'),
-          ),
-          busy ? React.createElement('div', { className: 'csr-hint' }, busy) : null,
-          draft.status === 'approved' ? React.createElement('div', { className: 'csr-hint' }, '✅ 已批准发布。现在对 agent 说一句「继续」，它会用上面②区的发布标题和正文发布。') : null,
-          draft.status === 'rejected' ? React.createElement('div', { className: 'csr-hint' }, '已打回。修改上面内容后点「保存修改」，或直接对 agent 说出你的意见。') : null,
-          draft.status === 'draft' ? React.createElement('div', { className: 'csr-hint' }, '①区实时预览配色×版式；照片和背景图请直接拖给 agent（拖进对话即可），它会加进卡片。②区是发布文案。') : null,
-          draft.status === 'edited' ? React.createElement('div', { className: 'csr-hint' }, '已保存修改，等待 agent 重新渲染正式卡片。') : null,
+          tabBar,
+          tab === 'review' ? reviewTab : null,
+          tab === 'publish' ? publishTab : null,
+          tab === 'settings' ? settingsTab : null,
         ),
         zoom ? React.createElement('div', { className: 'csr-preview', onClick: () => setZoom(null) },
           React.createElement('div', {
@@ -430,8 +442,7 @@ return {
                 zoom.bgImage ? { backgroundImage: 'url(' + zoom.bgImage.replaceAll("'", '%27') + ')' } : {}
               ),
               dangerouslySetInnerHTML: { __html: zoom.html },
-            }),
-          ),
+            })),
         ) : null,
       )
     }
