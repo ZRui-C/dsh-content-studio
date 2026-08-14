@@ -15,6 +15,7 @@ description: 技术内容创作与多平台分发的端到端工作流：Markdow
 | 桌面录屏 | `content_screen_record` | ffmpeg AVFoundation，固定时长 MP4；可带麦克风、可裁切 |
 | 采集设备排查 | `content_capture_devices` | 列出 ffmpeg 看到的屏幕/麦克风设备 |
 | Markdown → 图文卡片 | `content_md_to_cards` | Chrome 无头渲染：封面 + 按 H1/H2 分节成卡（1242×1660） |
+| AI 文本生图 | `content_text_to_image` | Nano Banana / Gemini 2.5 Flash Image，需 `GEMINI_API_KEY`（aistudio.google.com/apikey）；产出路径可作 `bg_image` 或 `![描述](路径)` |
 | Markdown → 排版 HTML | `content_md_to_html` | 自包含 HTML，浏览器预览 / 手动粘贴到 CSDN、公众号 |
 | dev.to 发布 | `content_publish_devto` | Forem 官方 API（草稿/直接发布） |
 | 网页截图/快照 | `mcp__playwright__browser_take_screenshot` 等 | Playwright MCP（`--browser chrome`） |
@@ -41,6 +42,7 @@ description: 技术内容创作与多平台分发的端到端工作流：Markdow
 4. **预览与迭代**：逐张 `read_image` 检查排版（截断、跑版、中英文混排）；不满意就改 Markdown 或换 style 重渲染 —— 渲染是幂等的，可反复跑。
 5. **补充实拍素材（含照片与背景图）**：
    - 产品界面用 `content_screenshot`（区域截取）或 Playwright 截图；操作演示用 `content_screen_record`（10-60 秒短片段）或 `browser_start_video`。用 ffmpeg（bash 工具）裁剪/加速/加字幕后再插入。
+   - **AI 生成封面/背景/插图**：`content_text_to_image`（Nano Banana）按提示词生图（封面用 3:4、背景用 1:1 或 16:9），返回的本地路径直接传给 `bg_image` 或写进 `![描述](路径)`，无需二次处理。
    - **用户拖进对话的图片**：拿到附件路径后，写进 Markdown 用 `![描述](<本地路径>)` 插到对应小节，或作为背景图 `bg_image: <本地路径>` 传给 `content_md_to_cards` / `content_review_open` / `content_review_refresh` —— 审阅插件 Host 会自动把本地路径转成 data URL，面板 2 秒内实时显示；正式渲染器也会自动嵌入。
 6. **发布前人工审阅（发布前必经）**：
    - `content_review_open`，传入 `cards`（卡片 PNG 路径，封面在前）、`markdown`、`cover`、`footer`、`style`，以及初始 `publish_title`/`publish_body`（发布文案）→ 浏览器右下角弹出「图文审阅」浮动面板。**面板分两个区**：① 卡片渲染 —— 决定**图片里的字**（改完重渲染）；② 发布文案 —— **图片之外的**标题（≤20 字）和正文（≤1000 字，可带 #话题#），两者相互独立。**调完立即结束本轮**；

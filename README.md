@@ -8,6 +8,7 @@
 
 ## 特性
 
+- 🎨 `content_text_to_image` —— 文本生图（Nano Banana / Gemini 2.5 Flash Image，需 API key）：封面、背景图、插图一键生成
 - 📸 `content_screenshot` —— macOS 桌面截屏（全屏 / 区域 / 延时）
 - 🎬 `content_screen_record` —— ffmpeg AVFoundation 定时长 MP4 录屏，自动探测屏幕/麦克风设备，支持麦克风与裁切区域
 - 🃏 `content_md_to_cards` —— Markdown → 小红书图文卡片（Chrome 无头渲染）：封面卡 + 按 H1/H2 分节成卡，1242×1660（3:4），**5 套配色 × 4 种版式**，支持 `![描述](路径)` 插图与带可读性遮罩的背景图
@@ -47,6 +48,7 @@ rsync -a ~/Projects/dsh-content-studio/ ~/.dsh/.agent-presets/content-studio/
 | `content_screen_record` | 定时长桌面 MP4 录屏（ffmpeg AVFoundation），可选麦克风与裁切 |
 | `content_capture_devices` | 列出 ffmpeg 可见的采集设备 |
 | `content_md_to_cards` | Markdown → XHS 卡片（Chrome 无头渲染，封面 + 分节成卡） |
+| `content_text_to_image` | 文本生图（Nano Banana），支持 1:1/3:4/4:3/9:16/16:9 |
 | `content_md_to_html` | Markdown → 排版 HTML（自包含） |
 | `content_publish_devto` | dev.to API 发布 |
 | `content_review_open / status / refresh / close` | 发布前持久化人工审阅 |
@@ -61,6 +63,7 @@ rsync -a ~/Projects/dsh-content-studio/ ~/.dsh/.agent-presets/content-studio/
 - **版式（4 种）**：`classic` 经典（左竖线标题）· `magazine` 杂志（衬线居中）· `poster` 大字报（超大标题、色块高亮）· `notebook` 手账（贴纸胶囊、横线底纹）
 - **照片**：Markdown 图片语法 `![描述](路径/URL)`，本地路径自动嵌入为 data URL
 - **背景图**：`bg_image`（URL 或本地路径），带主题感半透明遮罩保证文字可读
+- **AI 生图**：`content_text_to_image` 生成封面/背景/插图（本地路径直接可用作 `bg_image` 或 `![描述](路径)`）
 
 ## 审阅工作流（人机双层协作）
 
@@ -93,6 +96,7 @@ content_review_status
 ## 环境要求
 
 - macOS、ffmpeg（`brew install ffmpeg`）、Google Chrome
+- AI 生图需 Gemini API key（[aistudio.google.com/apikey](https://aistudio.google.com/apikey) 创建，设 `GEMINI_API_KEY` 或调用时传 `api_key`）
 - 给运行 DSH 的终端授予「屏幕录制」权限
 - 小红书一次性扫码登录（`mcp__xhs__xhs_auth_login`）；dev.to API key 设 `DEVTO_API_KEY`
 

@@ -11,6 +11,7 @@ import { recordScreen, listDevices } from './lib/record.js'
 import { mdToCards, mdToHtml, findChrome } from './lib/cards.js'
 import { publishDevto } from './lib/devto.js'
 import { reviewOpen, reviewStatus, reviewRefresh, reviewClose } from './lib/review.js'
+import { textToImage } from './lib/text2img.js'
 import { objectSchema, textBlock, REGION_SCHEMA } from './lib/util.js'
 
 export const name = 'content-studio'
@@ -300,6 +301,44 @@ export function apply(ctx) {
       render: (_args, value) => textBlock(`Styled HTML written: ${value.html_path}\nOpen in a browser or pass to Playwright MCP.`),
     },
     execute: (args) => mdToHtml(args),
+  })
+
+  // ── AI text-to-image (Nano Banana) ─────────────────────────────────────────
+  registerTool(ctx, {
+    name: 'content_text_to_image',
+    description:
+      'Generate an image from a text prompt with Nano Banana (Google Gemini 2.5 Flash Image) via the Generative Language API. ' +
+      'Requires a Gemini API key: pass api_key, or set GEMINI_API_KEY in the environment (create one at https://aistudio.google.com/apikey). ' +
+      'Use the returned local path for XHS covers, as bg_image for content_md_to_cards, or as ![alt](path) inside card markdown — both embed it automatically. ' +
+      'Aspect ratios: 1:1 square (default), 3:4 portrait (good for XHS covers), 4:3, 9:16, 16:9.',
+    parameters: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['prompt'],
+      properties: {
+        prompt: { type: 'string', description: 'Image prompt (Chinese or English). Describe subject, style, colors, composition.' },
+        aspect_ratio: { type: 'string', enum: ['1:1', '3:4', '4:3', '9:16', '16:9'], description: 'Output aspect ratio. Default 1:1.' },
+        api_key: { type: 'string', description: 'Optional Gemini API key; falls back to GEMINI_API_KEY / GOOGLE_API_KEY env.' },
+        output_path: { type: 'string', description: 'Optional absolute output path. Default: ~/.dsh/content-studio-output/ai-images/img-<timestamp>.png' },
+      },
+    },
+    output: {
+      schema: objectSchema(
+        {
+          output_path: { type: 'string' },
+          aspect_ratio: { type: 'string' },
+          provider: { type: 'string' },
+          note: { type: 'string' },
+        },
+        ['output_path']
+      ),
+      render: (_args, value) =>
+        textBlock(
+          `AI 图片已生成：${value.output_path}\n比例 ${value.aspect_ratio} · ${value.provider}\n${value.note}`
+        ),
+    },
+    execute: (args) => textToImage(args),
+    timeoutMs: 120000,
   })
 
   // ── dev.to publishing ─────────────────────────────────────────────────────

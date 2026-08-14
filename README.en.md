@@ -8,6 +8,7 @@ Screenshots, screen recording, Markdown → Xiaohongshu (XHS) image cards, dev.t
 
 ## Features
 
+- 🎨 `content_text_to_image` — AI text-to-image (Nano Banana / Gemini 2.5 Flash Image, API key required) for covers, backgrounds, and illustrations
 - 📸 `content_screenshot` — desktop screenshot on macOS (full screen / region / delay)
 - 🎬 `content_screen_record` — timed MP4 screen capture via ffmpeg AVFoundation with automatic device detection, optional microphone and crop region
 - 🃏 `content_md_to_cards` — Markdown → XHS image cards rendered by headless Chrome: cover card + one card per H1/H2 section at 1242×1660 (3:4), **5 palettes × 4 layouts**, photos via `![alt](path)`, background images with a readability overlay
@@ -47,6 +48,7 @@ Then start a session on the 内容工作室 (content-studio) preset: `standard` 
 | `content_screen_record` | Fixed-duration desktop MP4 (ffmpeg AVFoundation), optional mic & crop |
 | `content_capture_devices` | List the capture devices ffmpeg sees |
 | `content_md_to_cards` | Markdown → XHS cards (headless Chrome, cover + per-section split) |
+| `content_text_to_image` | AI text-to-image (Nano Banana), 1:1 / 3:4 / 4:3 / 9:16 / 16:9 |
 | `content_md_to_html` | Markdown → styled self-contained HTML |
 | `content_publish_devto` | dev.to API publishing |
 | `content_review_open / status / refresh / close` | Durable human review gate before publishing |
@@ -61,6 +63,7 @@ Two independent dimensions — palette and layout — plus photos and background
 - **Layouts (4)**: `classic` 经典 (left-bar headings) · `magazine` 杂志 (serif, centered) · `poster` 大字报 (oversized headings, color-block highlights) · `notebook` 手账 (sticker pills, ruled background)
 - **Photos**: Markdown image syntax `![alt](path-or-url)` — local paths are embedded as data URLs automatically
 - **Background**: `bg_image` (URL or local path) with a theme-aware translucent overlay for text readability
+- **AI images**: `content_text_to_image` generates covers / backgrounds / illustrations (the local path feeds `bg_image` or `![alt](path)` directly)
 
 ## Review workflow (human in the loop)
 
@@ -93,6 +96,7 @@ Tools and the draft are static (they survive restarts). The browser panel is a d
 ## Requirements
 
 - macOS, ffmpeg (`brew install ffmpeg`), Google Chrome
+- AI image generation needs a Gemini API key ([aistudio.google.com/apikey](https://aistudio.google.com/apikey), set `GEMINI_API_KEY` or pass `api_key`)
 - Screen Recording permission for the terminal running DSH
 - One-time XHS QR login (`mcp__xhs__xhs_auth_login`); dev.to API key via `DEVTO_API_KEY`
 
