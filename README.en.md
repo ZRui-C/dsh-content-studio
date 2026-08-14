@@ -23,6 +23,9 @@ Screenshots, screen recording, Markdown → Xiaohongshu (XHS) image cards, dev.t
 ### Option A — bundle (recommended)
 
 ```bash
+# From npm (recommended)
+dsh plugin --profile web add dsh-content-studio
+# Or from GitHub
 dsh plugin --profile web add "github:ZRui-C/dsh-content-studio#main"
 # or a local checkout while developing:
 dsh plugin --profile web add ~/Projects/dsh-content-studio

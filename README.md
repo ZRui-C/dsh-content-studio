@@ -23,6 +23,9 @@
 ### 方式 A —— bundle 安装（推荐）
 
 ```bash
+# 从 npm（推荐）
+dsh plugin --profile web add dsh-content-studio
+# 或从 GitHub
 dsh plugin --profile web add "github:ZRui-C/dsh-content-studio#main"
 # 开发时用本地路径：
 dsh plugin --profile web add ~/Projects/dsh-content-studio

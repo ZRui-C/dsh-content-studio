@@ -45,6 +45,7 @@ description: 技术内容创作与多平台分发的端到端工作流：Markdow
    - **AI 生成封面/背景/插图**：`content_text_to_image`（Nano Banana）按提示词生图（封面用 3:4、背景用 1:1 或 16:9），返回的本地路径直接传给 `bg_image` 或写进 `![描述](路径)`，无需二次处理。
    - **用户拖进对话的图片**：拿到附件路径后，写进 Markdown 用 `![描述](<本地路径>)` 插到对应小节，或作为背景图 `bg_image: <本地路径>` 传给 `content_md_to_cards` / `content_review_open` / `content_review_refresh` —— 审阅插件 Host 会自动把本地路径转成 data URL，面板 2 秒内实时显示；正式渲染器也会自动嵌入。
 6. **发布前人工审阅（发布前必经）**：
+   - **面板自恢复（每次会话首次审阅前检查）**：面板是动态插件、进程重启会丢。若本会话尚未运行面板（不确定就直接重建，重复运行同名工具会冲突报错，报错说明面板已在）：用 `cordis_define`（`code.host` = 项目 `plugins/content-review-panel/host.js`、`code.client` = `client.js` 全文）+ `cordis_run` 拉起 —— 首次会弹授权，请用户点允许。host.js 是文件桥接版，直接读写静态工具落盘的 draft.json，无需改任何路径。
    - `content_review_open`，传入 `cards`（卡片 PNG 路径，封面在前）、`markdown`、`cover`、`footer`、`style`，以及初始 `publish_title`/`publish_body`（发布文案）→ 浏览器右下角弹出「图文审阅」浮动面板。**面板分两个区**：① 卡片渲染 —— 决定**图片里的字**（改完重渲染）；② 发布文案 —— **图片之外的**标题（≤20 字）和正文（≤1000 字，可带 #话题#），两者相互独立。**调完立即结束本轮**；
    - 用户操作完会说「继续」→ `content_review_status`：
      - `edited`：用返回的 `markdown/cover/footer` 重新 `content_md_to_cards` → `content_review_refresh` 更新面板（发布文案不动）→ 再等一轮确认；
