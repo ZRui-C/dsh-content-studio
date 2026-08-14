@@ -11,7 +11,8 @@
     "src/",
     "vendor/",
     "cordis.patch.yml",
-    "README.md"
+    "README.md",
+    "README.en.md"
   ],
   "dsh": {
     "bundle": {
