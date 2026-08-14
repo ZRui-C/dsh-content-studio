@@ -1,0 +1,33 @@
+{
+  "name": "dsh-content-studio",
+  "version": "0.2.0",
+  "description": "DSH bundle plugin: 内容创作与多平台分发 —— 桌面截屏/录屏、Markdown→小红书图文卡片（5 配色 × 4 版式、照片插图、背景图）、dev.to 官方 API 发布、发布前人工审阅（草稿落盘），并挂载 Playwright 与小红书 MCP。",
+  "type": "module",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "files": [
+    "src/",
+    "vendor/",
+    "cordis.patch.yml",
+    "README.md"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "keywords": [
+    "deepseek-harness",
+    "dsh",
+    "dsh-plugin",
+    "cordis",
+    "xiaohongshu",
+    "content",
+    "screenshot",
+    "screen-recording",
+    "devto"
+  ],
+  "license": "MIT"
+}

@@ -1,0 +1,54 @@
+# dsh-content-studio bundle layer — applied over the profile tree when this
+# package is installed via `dsh plugin --profile <name> add ...`.
+#
+# Host plane: the content-studio plugin registers the model-facing tools on the
+# shared `tools` registry (content_screenshot / content_screen_record /
+# content_capture_devices / content_md_to_cards / content_md_to_html /
+# content_publish_devto / content_review_open / content_review_status /
+# content_review_refresh / content_review_close) and persists the review draft
+# to ~/.dsh/content-studio-output/review/draft.json.
+#
+# MCP rows: Playwright (webpage screenshots / session video / UI automation,
+# system Chrome channel) and xhs-mcp (Xiaohongshu login / publish / search).
+#
+# NOTE: the Chrome path below is machine-local; adjust it or remove
+# PUPPETEER_EXECUTABLE_PATH to let xhs-mcp download its own Chromium.
+#
+# NOTE 2: pick ONE install path — either this bundle (with any preset), or the
+# content-studio agent preset (this repo copied to ~/.dsh/.agent-presets/).
+# Both register the same tool names; mounting both fails loudly on duplicates.
+- insert:
+    - id: tool-content-studio
+      name: 'dsh-content-studio'
+
+    - id: mcp-playwright
+      name: '@deepseek-ai/dsh-mcp-client'
+      config:
+        serverName: playwright
+        transport: stdio
+        command: npx
+        args: ['-y', '@playwright/mcp', '--browser', 'chrome']
+        failOnStartupError: false
+        toolCallTimeoutMs: 180000
+
+    - id: mcp-xhs
+      name: '@deepseek-ai/dsh-mcp-client'
+      config:
+        serverName: xhs
+        transport: stdio
+        command: npx
+        args: ['-y', 'xhs-mcp', 'mcp']
+        env:
+          PUPPETEER_EXECUTABLE_PATH: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
+          PUPPETEER_SKIP_DOWNLOAD: 'true'
+        failOnStartupError: false
+        toolCallTimeoutMs: 180000
+
+    # 掘金（可选）：本地启动 JueJin-MCP 后取消注释。
+    # - id: mcp-juejin
+    #   name: '@deepseek-ai/dsh-mcp-client'
+    #   config:
+    #     serverName: juejin
+    #     transport: streamable-http
+    #     url: http://localhost:10086/mcp
+    #     failOnStartupError: false
