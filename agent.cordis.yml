@@ -268,6 +268,10 @@
 # 按需拉起「图文审阅浮动面板」动态插件（模板见项目 plugins/content-review-panel/，
 # 工作流见 xhs-content-studio Skill「发布前人工审阅」一节）。面板的 Client 半
 # 只能经动态运行时送达浏览器，所以这行是审阅体验的固定组成部分。
+# 注意：dsh-tool-cordis 的 Host Inspect Provider 是进程级单例。
+# 若同一进程还有 cordis 预设的会话（其 standing mount 已注册这些 Provider），
+# 本行会导致整个预设挂载被拒（GUI 回退到 standard）。独立部署（无 cordis
+# 会话共存，如 OpenClaw 嵌入）可正常启用；共存机器请在本机副本里 disabled: true。
 - id: tool-cordis
   name: '@deepseek-ai/dsh-tool-cordis'
 
