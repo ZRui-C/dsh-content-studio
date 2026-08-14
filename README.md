@@ -97,6 +97,8 @@ content_review_status
 
 - macOS、ffmpeg（`brew install ffmpeg`）、Google Chrome
 - AI 生图需 Gemini API key（[aistudio.google.com/apikey](https://aistudio.google.com/apikey) 创建，设 `GEMINI_API_KEY` 或调用时传 `api_key`）
+- dev.to 发布需 API key（dev.to/settings/extensions 创建，设 `DEVTO_API_KEY`）
+- 也可直接在审阅面板「③ API Keys」区配置（保存到 `~/.dsh/content-studio-output/keys.json`，仅显示已配置状态）
 - 给运行 DSH 的终端授予「屏幕录制」权限
 - 小红书一次性扫码登录（`mcp__xhs__xhs_auth_login`）；dev.to API key 设 `DEVTO_API_KEY`
 

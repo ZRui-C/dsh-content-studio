@@ -2,6 +2,7 @@
 // Generative Language API — one API key, one POST, base64 image back.
 // Docs: https://ai.google.dev/gemini-api/docs/image-generation
 import { writeFileSync } from 'node:fs'
+import { getKey } from './keys.js'
 import { resolveFile } from './util.js'
 
 const ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent'
@@ -9,10 +10,10 @@ const ASPECTS = ['1:1', '16:9', '9:16', '4:3', '3:4']
 
 export async function textToImage(args) {
   const keyArg = typeof args.api_key === 'string' ? args.api_key.trim() : ''
-  const apiKey = keyArg || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY
+  const apiKey = keyArg || getKey('geminiApiKey') || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY
   if (!apiKey) {
     throw new Error(
-      'content_text_to_image: no API key — pass api_key or set GEMINI_API_KEY in the environment (create one at https://aistudio.google.com/apikey).'
+      'content_text_to_image: no API key — pass api_key, save one in the review panel (③ 设置/API Keys), or set GEMINI_API_KEY in the environment (create one at https://aistudio.google.com/apikey).'
     )
   }
   const prompt = typeof args.prompt === 'string' ? args.prompt.trim() : ''

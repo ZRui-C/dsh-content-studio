@@ -97,6 +97,8 @@ Tools and the draft are static (they survive restarts). The browser panel is a d
 
 - macOS, ffmpeg (`brew install ffmpeg`), Google Chrome
 - AI image generation needs a Gemini API key ([aistudio.google.com/apikey](https://aistudio.google.com/apikey), set `GEMINI_API_KEY` or pass `api_key`)
+- dev.to publishing needs an API key (dev.to/settings/extensions, `DEVTO_API_KEY`)
+- Or configure both in the review panel's "③ API Keys" section (stored in `~/.dsh/content-studio-output/keys.json`; the UI shows set/not-set only)
 - Screen Recording permission for the terminal running DSH
 - One-time XHS QR login (`mcp__xhs__xhs_auth_login`); dev.to API key via `DEVTO_API_KEY`
 

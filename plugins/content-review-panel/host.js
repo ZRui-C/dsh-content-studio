@@ -9,6 +9,7 @@
 // NOTE: the draft path below is machine-local. Adjust it when moving machines.
 
 const DRAFT_PATH = '/Users/haleychen/.dsh/content-studio-output/review/draft.json'
+const KEYS_PATH = '/Users/haleychen/.dsh/content-studio-output/keys.json'
 
 return {
   name: 'content-review-panel',
@@ -64,6 +65,42 @@ return {
       d.revision += 1
       await writeDraft(d)
       return { ok: true, revision: d.revision, status: d.status }
+    })
+
+    // API-key store bridge: presence-only status + merge-save of non-empty values.
+    harness.handle('get-keys', async () => {
+      if (fs === undefined) return { geminiSet: false, devtoSet: false }
+      try {
+        const target = await fs.resolve(KEYS_PATH)
+        const text = await fs.readText(target)
+        const parsed = JSON.parse(text)
+        return { geminiSet: Boolean(parsed && parsed.geminiApiKey), devtoSet: Boolean(parsed && parsed.devtoApiKey) }
+      } catch (error) {
+        return { geminiSet: false, devtoSet: false }
+      }
+    })
+
+    harness.handle('save-keys', async (args) => {
+      if (fs === undefined) return { ok: false, error: 'fs service unavailable' }
+      try {
+        const target = await fs.resolve(KEYS_PATH)
+        let next = {}
+        try {
+          const text = await fs.readText(target)
+          const parsed = JSON.parse(text)
+          if (parsed && typeof parsed === 'object') next = parsed
+        } catch (error) {
+          next = {}
+        }
+        for (const name of ['geminiApiKey', 'devtoApiKey']) {
+          const value = args && args[name]
+          if (typeof value === 'string' && value.trim() !== '') next[name] = value.trim()
+        }
+        await fs.writeText(target, JSON.stringify(next, null, 2))
+        return { ok: true, geminiSet: Boolean(next.geminiApiKey), devtoSet: Boolean(next.devtoApiKey) }
+      } catch (error) {
+        return { ok: false, error: String(error && error.message ? error.message : error) }
+      }
     })
 
     harness.handle('decide', async (args) => {

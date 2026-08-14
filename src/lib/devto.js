@@ -1,11 +1,12 @@
 // dev.to (Forem) publishing via the official REST API.
 // Docs: https://developers.forem.com/api — POST /api/articles with header api-key.
+import { getKey } from './keys.js'
 
 export async function publishDevto(args) {
-  const key = args.api_key ?? process.env.DEVTO_API_KEY
+  const key = args.api_key ?? getKey('devtoApiKey') ?? process.env.DEVTO_API_KEY
   if (!key) {
     throw new Error(
-      'content_publish_devto: no API key. Pass api_key, or export DEVTO_API_KEY. ' +
+      'content_publish_devto: no API key. Pass api_key, save one in the review panel (③ 设置/API Keys), or export DEVTO_API_KEY. ' +
         'Get one at https://dev.to/settings/extensions ("DEV Community API Keys").'
     )
   }

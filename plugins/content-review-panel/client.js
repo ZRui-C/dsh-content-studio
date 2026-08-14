@@ -218,6 +218,9 @@ return {
       const [pubTitle, setPubTitle] = React.useState('')
       const [pubBody, setPubBody] = React.useState('')
       const [note, setNote] = React.useState('')
+      const [keyStatus, setKeyStatus] = React.useState({ geminiSet: false, devtoSet: false })
+      const [geminiInput, setGeminiInput] = React.useState('')
+      const [devtoInput, setDevtoInput] = React.useState('')
       const [collapsed, setCollapsed] = React.useState(false)
       const [zoom, setZoom] = React.useState(null)
       const [busy, setBusy] = React.useState('')
@@ -236,6 +239,12 @@ return {
           }
           if (d) lastRevision = d.revision
           setDraft(d)
+          try {
+            const k = await host.call('get-keys', {})
+            if (k) setKeyStatus({ geminiSet: Boolean(k.geminiSet), devtoSet: Boolean(k.devtoSet) })
+          } catch (error) {
+            // keys unavailable — keep last status
+          }
           if (d) {
             setMd((prev) => (prev === '' ? (d.markdown ?? '') : prev))
             setCoverTitle((prev) => (prev === '' ? (d.cover && d.cover.title ? d.cover.title : '') : prev))
@@ -267,6 +276,23 @@ return {
           })
           lastRevision = r.revision ?? lastRevision
           setBusy('已保存，agent 会重新渲染正式卡片')
+        } catch (error) {
+          setBusy('保存失败')
+        }
+      }
+
+      const saveKeys = async () => {
+        setBusy('保存 Keys…')
+        try {
+          const r = await host.call('save-keys', { geminiApiKey: geminiInput, devtoApiKey: devtoInput })
+          if (r && r.ok) {
+            setKeyStatus({ geminiSet: Boolean(r.geminiSet), devtoSet: Boolean(r.devtoSet) })
+            setGeminiInput('')
+            setDevtoInput('')
+            setBusy('Keys 已保存')
+          } else {
+            setBusy('保存失败：' + (r && r.error ? r.error : 'unknown'))
+          }
         } catch (error) {
           setBusy('保存失败')
         }
@@ -365,6 +391,16 @@ return {
               React.createElement('span', { className: 'csr-count' }, pubBody.length + '/1000'),
             ),
             React.createElement('textarea', { className: 'csr-textarea', style: { minHeight: '76px' }, value: pubBody, placeholder: '发布时附在图片下面的正文，和图片里的详细内容可以是两套话术', onChange: (e) => setPubBody(e.target.value) }),
+          ),
+          React.createElement('hr', { className: 'csr-divider' }),
+          React.createElement('div', null,
+            React.createElement('div', { className: 'csr-label-row' },
+              React.createElement('span', { className: 'csr-label' }, '③ API Keys（可选，留空不修改）'),
+              React.createElement('span', { className: 'csr-count' }, 'Gemini ' + (keyStatus.geminiSet ? '✓' : '—') + ' · dev.to ' + (keyStatus.devtoSet ? '✓' : '—')),
+            ),
+            React.createElement('input', { className: 'csr-input', type: 'password', value: geminiInput, placeholder: 'Gemini API Key（aistudio.google.com/apikey）', onChange: (e) => setGeminiInput(e.target.value) }),
+            React.createElement('input', { className: 'csr-input', style: { marginTop: '6px' }, type: 'password', value: devtoInput, placeholder: 'dev.to API Key（dev.to/settings/extensions）', onChange: (e) => setDevtoInput(e.target.value) }),
+            React.createElement('button', { className: 'csr-btn csr-save', style: { marginTop: '6px' }, onClick: saveKeys }, '💾 保存 Keys'),
           ),
           React.createElement('hr', { className: 'csr-divider' }),
           React.createElement('div', null,
