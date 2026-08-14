@@ -96,6 +96,12 @@ content_review_status
 - 给运行 DSH 的终端授予「屏幕录制」权限
 - 小红书一次性扫码登录（`mcp__xhs__xhs_auth_login`）；dev.to API key 设 `DEVTO_API_KEY`
 
+## 跨机器注意
+
+- `cordis.patch.yml` 把 xhs-mcp 固定在作者的 Chrome 二进制上（`PUPPETEER_EXECUTABLE_PATH`）。换机器时要么改成目标机器的路径，要么删掉这个环境变量并执行一次 `npx xhs-mcp browser` 让它自下载 Chromium。
+- 桌面截屏/录屏（`content_screenshot` / `content_screen_record`）目前仅 macOS（screencapture / AVFoundation）；Linux/Windows 适配在路线图上。
+- 审阅草稿在 `~/.dsh/content-studio-output/` 下；卡片渲染需要本机 Chrome（或 `CHROME_PATH` 指向 Chromium 内核浏览器）。
+
 ## 仓库结构
 
 ```

@@ -46,6 +46,33 @@ function registerTool(ctx, definition) {
 }
 
 export function apply(ctx) {
+  // Session projection: host→client feed for the review panel. The dynamic
+  // panel bridges through draft.json today; the static panel (roadmap) reads
+  // this projection reactively instead. Each review mutation appends a
+  // 'content-review/update' session event carrying a small draft summary.
+  ctx.inject(['sessionProjections'], (projectionCtx) => {
+    projectionCtx.sessionProjections.register({
+      key: 'contentReview',
+      schema: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          revision: { type: 'integer' },
+          status: { type: 'string', enum: ['draft', 'edited', 'approved', 'rejected'] },
+          cardCount: { type: 'integer' },
+          publishTitle: { type: 'string' },
+          publishBody: { type: 'string' },
+          openedAt: { type: 'integer' },
+          decidedAt: { oneOf: [{ type: 'integer' }, { type: 'null' }] },
+        },
+      },
+      init: () => null,
+      apply: (state, event) => (event.type === 'content-review/update' ? event.data : state),
+      view: (state) => state,
+      stateVersion: 1,
+    })
+  })
+
   // ── desktop screenshot ────────────────────────────────────────────────────
   registerTool(ctx, {
     name: 'content_screenshot',
@@ -416,7 +443,21 @@ export function apply(ctx) {
             : '审阅打开失败：' + value.hint
         ),
     },
-    execute: (args) => reviewOpen(args),
+    execute: (args, exec) => {
+      const result = reviewOpen(args)
+      if (exec && exec.agent) {
+        exec.agent.session.append('content-review/update', {
+          revision: 1,
+          status: 'draft',
+          cardCount: Array.isArray(args.cards) ? args.cards.length : 0,
+          publishTitle: typeof args.publish_title === 'string' ? args.publish_title : '',
+          publishBody: typeof args.publish_body === 'string' ? args.publish_body : '',
+          openedAt: Date.now(),
+          decidedAt: null,
+        })
+      }
+      return result
+    },
   })
 
   registerTool(ctx, {
@@ -524,7 +565,21 @@ export function apply(ctx) {
             : '更新失败：' + value.hint
         ),
     },
-    execute: (args) => reviewRefresh(args),
+    execute: (args, exec) => {
+      const result = reviewRefresh(args)
+      if (exec && exec.agent) {
+        exec.agent.session.append('content-review/update', {
+          revision: result.revision,
+          status: 'draft',
+          cardCount: Array.isArray(args.cards) ? args.cards.length : 0,
+          publishTitle: null,
+          publishBody: null,
+          openedAt: Date.now(),
+          decidedAt: null,
+        })
+      }
+      return result
+    },
   })
 
   registerTool(ctx, {
@@ -535,6 +590,11 @@ export function apply(ctx) {
       schema: objectSchema({ ok: { type: 'boolean' } }, ['ok']),
       render: (_args, value) => textBlock(value.ok ? '审阅已关闭。' : '关闭失败。'),
     },
-    execute: () => reviewClose(),
+    execute: (_args, exec) => {
+      if (exec && exec.agent) {
+        exec.agent.session.append('content-review/update', null)
+      }
+      return reviewClose()
+    },
   })
 }

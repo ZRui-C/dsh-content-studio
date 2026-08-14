@@ -96,6 +96,12 @@ Tools and the draft are static (they survive restarts). The browser panel is a d
 - Screen Recording permission for the terminal running DSH
 - One-time XHS QR login (`mcp__xhs__xhs_auth_login`); dev.to API key via `DEVTO_API_KEY`
 
+## Cross-machine notes
+
+- `cordis.patch.yml` pins xhs-mcp to the author's Chrome binary (`PUPPETEER_EXECUTABLE_PATH`). On another machine either update that path, or remove the env entry and run `npx xhs-mcp browser` once to let it download its own Chromium.
+- Desktop capture tools (`content_screenshot` / `content_screen_record`) are macOS-only for now (screencapture / AVFoundation); Linux/Windows adapters are on the roadmap.
+- The review draft lives under `~/.dsh/content-studio-output/`; card renders need a local Chrome (or `CHROME_PATH` pointing at a Chromium binary).
+
 ## Repository layout
 
 ```
