@@ -1,4 +1,6 @@
-# content-review-panel（审阅面板 · 动态插件模板）
+# content-review-panel（历史参考）
+
+> 审阅面板已静态化：bundle 的 `dsh.client`（`lib/client.cjs`）+ Host 的 `/content-studio-api/*` 路由随 profile 加载，重启不丢、无需授权。本目录的 host.js/client.js 是动态插件的模板留存，仅在无 bundle 部署（如仅复制预设）时用于会话内重建。
 
 XHS 图文**发布前人工审阅**的浏览器浮动面板：看图、改 Markdown/封面/配色/版式、批准或打回。
 
