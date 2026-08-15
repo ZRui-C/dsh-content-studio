@@ -16,7 +16,7 @@ import { textToImage } from './lib/text2img.js'
 import { objectSchema, textBlock, REGION_SCHEMA } from './lib/util.js'
 
 export const name = 'content-studio'
-export const inject = ['tools']
+export const inject = ['tools', 'timer']
 
 const STYLE_ENUM = ['xhs-soft', 'xhs-dark', 'plain', 'forest', 'sunset']
 const SIZE_ENUM = ['xhs', 'square', 'story']
@@ -52,6 +52,9 @@ export function apply(ctx) {
   // The review panel ships as a static browser client (dsh.client bundle) and
   // talks to the host through these exact routes (the dsh-ppt pattern).
   ctx.effect(() => {
+    // webServer 与其它条目并发挂载，apply 时刻可能还没 provide（dsh-ppt 实测如此），
+    // 且 ctx.effect 不会因 ctx.get 的依赖出现而重跑 —— 用 interval 轮询兜底：
+    // 服务就位后注册一次并停止轮询；返回的 cleanup 在卸载时注销路由与定时器。
     const disposers = []
     const json = (handler) => async (req, res) => {
       try {
@@ -70,18 +73,34 @@ export function apply(ctx) {
         res.end(JSON.stringify({ ok: false, error: String((error && error.message) || error) }))
       }
     }
-    const webServer = ctx.get('webServer')
-    if (webServer && typeof webServer.register === 'function') {
-      disposers.push(webServer.register({ kind: 'exact', path: '/content-studio-api/get-draft', handler: json(async () => reviewGetRaw()) }))
-      disposers.push(webServer.register({ kind: 'exact', path: '/content-studio-api/save-draft', handler: json(async (body) => reviewSavePanel(body || {})) }))
-      disposers.push(webServer.register({ kind: 'exact', path: '/content-studio-api/decide', handler: json(async (body) => reviewDecidePanel(body && body.decision, body && body.note)) }))
-      disposers.push(webServer.register({ kind: 'exact', path: '/content-studio-api/get-keys', handler: json(async () => keysStatus()) }))
-      disposers.push(webServer.register({ kind: 'exact', path: '/content-studio-api/save-keys', handler: json(async (body) => {
-        saveKeys(body || {})
-        return keysStatus()
-      }) }))
+    function tryRegister() {
+      const webServer = ctx.get('webServer')
+      if (!webServer || typeof webServer.register !== 'function') return false
+      try {
+        disposers.push(webServer.register({ kind: 'exact', path: '/content-studio-api/get-draft', handler: json(async () => reviewGetRaw()) }))
+        disposers.push(webServer.register({ kind: 'exact', path: '/content-studio-api/save-draft', handler: json(async (body) => reviewSavePanel(body || {})) }))
+        disposers.push(webServer.register({ kind: 'exact', path: '/content-studio-api/decide', handler: json(async (body) => reviewDecidePanel(body && body.decision, body && body.note)) }))
+        disposers.push(webServer.register({ kind: 'exact', path: '/content-studio-api/get-keys', handler: json(async () => keysStatus()) }))
+        disposers.push(webServer.register({ kind: 'exact', path: '/content-studio-api/save-keys', handler: json(async (body) => {
+          saveKeys(body || {})
+          return keysStatus()
+        }) }))
+      } catch (error) {
+        // 路由已注册（同进程重复挂载）时忽略，留日志可查
+        for (const dispose of disposers) { try { dispose() } catch (e2) { /* ignore */ } }
+        disposers.length = 0
+        try { ctx.logger.warn('[dsh-content-studio] 面板路由注册跳过: ' + String((error && error.message) || error)) } catch (e2) { /* ignore */ }
+      }
+      return true
     }
-    return () => { for (const dispose of disposers) dispose() }
+    if (!tryRegister()) {
+      const timer = ctx.interval(() => { if (tryRegister()) timer() }, 500)
+      disposers.push(timer)
+    }
+    return () => {
+      for (const dispose of disposers) { try { dispose() } catch (e2) { /* ignore */ } }
+      disposers.length = 0
+    }
   })
 
   // ── dynamic Cordis plugin tools (define/run/stop/undefine) ─────────────────
@@ -89,8 +108,10 @@ export function apply(ctx) {
   // singletons and conflict with the cordis preset), so content-studio
   // sessions can define/run dynamic plugins even alongside cordis sessions.
   ctx.effect(() => {
-    const runner = ctx.get('dynamicCordisRunner')
-    if (!runner || typeof runner.define !== 'function') return
+    const disposers = []
+    function tryRegisterCordis() {
+      const runner = ctx.get('dynamicCordisRunner')
+      if (!runner || typeof runner.define !== 'function') return false
     const requireAgent = (exec) => {
       if (exec && exec.agent) return exec.agent
       throw new Error('Cordis dynamic tools require an Agent-backed session')
@@ -269,6 +290,16 @@ export function apply(ctx) {
         return { pluginId: args.pluginId, wasRunning: Boolean(receipt.wasRunning) }
       },
     })
+      return true
+    }
+    if (!tryRegisterCordis()) {
+      const timer = ctx.interval(() => { if (tryRegisterCordis()) timer() }, 500)
+      disposers.push(timer)
+    }
+    return () => {
+      for (const dispose of disposers) { try { dispose() } catch (e2) { /* ignore */ } }
+      disposers.length = 0
+    }
   })
 
   // ── desktop screenshot ────────────────────────────────────────────────────
