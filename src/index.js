@@ -10,7 +10,8 @@ import { screenshotDesktop } from './lib/screenshot.js'
 import { recordScreen, listDevices } from './lib/record.js'
 import { mdToCards, mdToHtml, findChrome } from './lib/cards.js'
 import { publishDevto } from './lib/devto.js'
-import { reviewOpen, reviewStatus, reviewRefresh, reviewClose } from './lib/review.js'
+import { reviewOpen, reviewStatus, reviewRefresh, reviewClose, reviewGetRaw, reviewSavePanel, reviewDecidePanel } from './lib/review.js'
+import { keysStatus, saveKeys } from './lib/keys.js'
 import { textToImage } from './lib/text2img.js'
 import { objectSchema, textBlock, REGION_SCHEMA } from './lib/util.js'
 
@@ -47,6 +48,42 @@ function registerTool(ctx, definition) {
 }
 
 export function apply(ctx) {
+  // ── static review-panel HTTP API ──────────────────────────────────────────
+  // The review panel ships as a static browser client (dsh.client bundle) and
+  // talks to the host through these exact routes (the dsh-ppt pattern).
+  ctx.effect(() => {
+    const disposers = []
+    const json = (handler) => async (req, res) => {
+      try {
+        let raw = ''
+        req.on('data', (chunk) => { raw += chunk })
+        await new Promise((resolve) => req.on('end', resolve))
+        let body = {}
+        if (raw) {
+          try { body = JSON.parse(raw) } catch { body = {} }
+        }
+        const value = await handler(body)
+        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' })
+        res.end(JSON.stringify(value))
+      } catch (error) {
+        res.writeHead(500, { 'Content-Type': 'application/json; charset=utf-8' })
+        res.end(JSON.stringify({ ok: false, error: String((error && error.message) || error) }))
+      }
+    }
+    const webServer = ctx.get('webServer')
+    if (webServer && typeof webServer.register === 'function') {
+      disposers.push(webServer.register({ kind: 'exact', path: '/content-studio-api/get-draft', handler: json(async () => reviewGetRaw()) }))
+      disposers.push(webServer.register({ kind: 'exact', path: '/content-studio-api/save-draft', handler: json(async (body) => reviewSavePanel(body || {})) }))
+      disposers.push(webServer.register({ kind: 'exact', path: '/content-studio-api/decide', handler: json(async (body) => reviewDecidePanel(body && body.decision, body && body.note)) }))
+      disposers.push(webServer.register({ kind: 'exact', path: '/content-studio-api/get-keys', handler: json(async () => keysStatus()) }))
+      disposers.push(webServer.register({ kind: 'exact', path: '/content-studio-api/save-keys', handler: json(async (body) => {
+        saveKeys(body || {})
+        return keysStatus()
+      }) }))
+    }
+    return () => { for (const dispose of disposers) dispose() }
+  })
+
   // ── desktop screenshot ────────────────────────────────────────────────────
   registerTool(ctx, {
     name: 'content_screenshot',

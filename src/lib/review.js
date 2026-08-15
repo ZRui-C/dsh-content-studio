@@ -62,6 +62,52 @@ function loadCards(cards) {
   return out
 }
 
+export function reviewGetRaw() {
+  return readDraft()
+}
+
+/** Panel-side save: merge editable fields, status -> edited, revision +1. */
+export function reviewSavePanel(patch) {
+  const d = readDraft()
+  if (d === null) return { ok: false, error: 'no draft' }
+  if (typeof patch.markdown === 'string') d.markdown = patch.markdown
+  if (patch.cover && typeof patch.cover === 'object') {
+    d.cover = {
+      title: typeof patch.cover.title === 'string' ? patch.cover.title : '',
+      subtitle: typeof patch.cover.subtitle === 'string' ? patch.cover.subtitle : '',
+      emoji: typeof patch.cover.emoji === 'string' ? patch.cover.emoji : '',
+    }
+  }
+  if (typeof patch.footer === 'string') d.footer = patch.footer
+  if (typeof patch.style === 'string') d.style = patch.style
+  if (typeof patch.layout === 'string') d.layout = patch.layout
+  if (typeof patch.bgImage === 'string') d.bgImage = patch.bgImage
+  if (typeof patch.publishTitle === 'string') d.publishTitle = patch.publishTitle
+  if (typeof patch.publishBody === 'string') d.publishBody = patch.publishBody
+  if (typeof patch.note === 'string') d.humanNote = patch.note
+  d.status = 'edited'
+  d.revision = (Number(d.revision) || 0) + 1
+  writeDraft(d)
+  return { ok: true, revision: d.revision, status: d.status }
+}
+
+/** Panel-side decision: approve/reject with an optional note. */
+export function reviewDecidePanel(decision, note) {
+  const d = readDraft()
+  if (d === null) return { ok: false, error: 'no draft' }
+  if (decision !== 'approve' && decision !== 'reject') {
+    return { ok: false, error: 'decision must be approve or reject' }
+  }
+  d.status = decision === 'approve' ? 'approved' : 'rejected'
+  d.decidedAt = Date.now()
+  if (decision === 'reject' && typeof note === 'string' && note.trim() !== '') {
+    d.humanNote = note
+  }
+  d.revision = (Number(d.revision) || 0) + 1
+  writeDraft(d)
+  return { ok: true, revision: d.revision, status: d.status }
+}
+
 export async function reviewOpen(args) {
   const cards = loadCards(args.cards)
   const draft = {
