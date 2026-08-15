@@ -84,6 +84,193 @@ export function apply(ctx) {
     return () => { for (const dispose of disposers) dispose() }
   })
 
+  // ── dynamic Cordis plugin tools (define/run/stop/undefine) ─────────────────
+  // Registered WITHOUT the Inspect Providers (those are process-level
+  // singletons and conflict with the cordis preset), so content-studio
+  // sessions can define/run dynamic plugins even alongside cordis sessions.
+  ctx.effect(() => {
+    const runner = ctx.get('dynamicCordisRunner')
+    if (!runner || typeof runner.define !== 'function') return
+    const requireAgent = (exec) => {
+      if (exec && exec.agent) return exec.agent
+      throw new Error('Cordis dynamic tools require an Agent-backed session')
+    }
+    const sp = ctx.get('systemPrompt')
+    if (sp && typeof sp.section === 'function') {
+      sp.section({
+        name: 'tool:cordis-mini',
+        order: 115,
+        text: 'You have the dynamic Cordis plugin tools (cordis_define / cordis_run / cordis_stop / cordis_undefine) without the inspect tools. Dynamic plugins are session-owned and process-local: they are lost on DSH restart. cordis_define only defines code; cordis_run activates it and may require the user to approve in the UI.',
+      })
+    }
+
+    registerTool(ctx, {
+      name: 'cordis_define',
+      description: 'Define an immutable Cordis Package. For a new Plugin, use kind:"new" and provide only a semantic prefix of 3–6 lowercase English letters; the Host returns the final pluginId and packageId. To modify an existing Plugin, use kind:"existing" with its exact pluginId to append a Package without overwriting older versions. Provide at least one of code.host and code.client. Each value is a plain JavaScript function body that returns a Cordis Plugin; no TypeScript, JSX, or import transformation occurs. Define only validates parameters and syntax and records source: it does not request approval, execute apply, or change currentPackageId. On success, call cordis_run with the returned IDs.',
+      parameters: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['plugin', 'name', 'purpose', 'code'],
+        properties: {
+          plugin: {
+            oneOf: [
+              {
+                type: 'object',
+                additionalProperties: false,
+                required: ['kind', 'idPrefix'],
+                properties: {
+                  kind: { type: 'string', const: 'new' },
+                  idPrefix: { type: 'string', description: 'Suggested semantic prefix of 3–6 lowercase English letters; the Host adds a unique numeric suffix.' },
+                },
+              },
+              {
+                type: 'object',
+                additionalProperties: false,
+                required: ['kind', 'pluginId'],
+                properties: {
+                  kind: { type: 'string', const: 'existing' },
+                  pluginId: { type: 'string', description: 'Exact ID of an existing Plugin; the new Package is appended to that instance.' },
+                },
+              },
+            ],
+          },
+          name: { type: 'string', description: 'Short, readable Package name.' },
+          purpose: { type: 'string', description: 'One-sentence, user-facing description of the Package purpose.' },
+          code: {
+            type: 'object',
+            additionalProperties: false,
+            properties: {
+              host: { type: 'string', description: 'Plain JavaScript function body that returns the Host-half Cordis Plugin.' },
+              client: { type: 'string', description: 'Plain JavaScript function body that returns the browser Client-half Cordis Plugin.' },
+            },
+          },
+        },
+      },
+      output: {
+        schema: objectSchema(
+          {
+            pluginId: { type: 'string' },
+            packageId: { type: 'string' },
+          },
+          ['pluginId', 'packageId']
+        ),
+        render: (_args, value) => textBlock(`Defined ${value.pluginId}/${value.packageId}; it is not running yet. Use cordis_run to activate this Package.`),
+      },
+      execute: (args, exec) => {
+        const agent = requireAgent(exec)
+        const plugin = args.plugin.kind === 'new'
+          ? { kind: 'new', idPrefix: args.plugin.idPrefix }
+          : { kind: 'existing', pluginId: args.plugin.pluginId }
+        const receipt = runner.define({
+          sessionId: agent.id,
+          plugin,
+          name: args.name,
+          purpose: args.purpose,
+          code: {
+            ...(args.code.host === undefined ? {} : { host: args.code.host }),
+            ...(args.code.client === undefined ? {} : { client: args.code.client }),
+          },
+        })
+        return { pluginId: String(receipt.pluginId), packageId: String(receipt.packageId) }
+      },
+    })
+
+    registerTool(ctx, {
+      name: 'cordis_run',
+      description: 'Activate one exact Package of a dynamic Plugin. Use mode:"run" for the first activation, restarting currentPackageId, or rollback. When current exists, use mode:"update" to switch to a different Package, even if the Plugin is currently stopped. An unauthorized Client Package creates an approval request and returns awaiting-approval; an authorized Package returns starting and continues asynchronously in the browser. Neither result waits for the final outcome inside the Tool. currentPackageId changes only after complete success; on failure, the old current and target next remain. Asynchronous success, rejection, or technical failure is reported through state and steering. After a technical failure, read diagnostics, correct the same Plugin, and retry autonomously. Do not request approval again after the user rejects it.',
+      parameters: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['pluginId', 'packageId', 'mode'],
+        properties: {
+          pluginId: { type: 'string', description: 'Stable Plugin ID returned by cordis_define.' },
+          packageId: { type: 'string', description: 'Exact immutable Package ID to activate under that Plugin.' },
+          mode: { type: 'string', enum: ['run', 'update'], description: 'Use run for the first activation, restarting current, or rollback; use update to switch from current to a different Package.' },
+        },
+      },
+      output: {
+        schema: objectSchema(
+          {
+            status: { type: 'string' },
+            pluginId: { type: 'string' },
+            packageId: { type: 'string' },
+            pluginRunId: { type: 'string' },
+          },
+          ['status']
+        ),
+        render: (_args, value) => {
+          const line = value.status === 'awaiting-approval'
+            ? `${value.pluginId}/${value.packageId} is awaiting user approval (${value.pluginRunId}).`
+            : value.status === 'starting'
+              ? `${value.pluginId}/${value.packageId} is starting asynchronously (${value.pluginRunId}).`
+              : `${value.pluginId}/${value.packageId} is running (${value.pluginRunId}).`
+          return textBlock(line)
+        },
+      },
+      execute: async (args, exec) => {
+        const agent = requireAgent(exec)
+        const receipt = await runner.run(agent, args.pluginId, args.packageId, args.mode, exec && exec.signal)
+        if (!receipt.ok) throw new Error(receipt.message)
+        return {
+          status: receipt.status === 'running' ? 'running' : receipt.status,
+          pluginId: args.pluginId,
+          packageId: args.packageId,
+          pluginRunId: String(receipt.pluginRunId ?? ''),
+        }
+      },
+    })
+
+    registerTool(ctx, {
+      name: 'cordis_stop',
+      description: 'Stop the current Run of a dynamic Plugin and cancel unfinished approval or activation requests. Retain the Plugin, every immutable Package, grants, currentPackageId, and nextPackageId so it can later run or update directly. Stopping an already stopped Plugin succeeds idempotently. Use this Tool to disable effects temporarily; use cordis_undefine for permanent removal.',
+      parameters: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['pluginId'],
+        properties: {
+          pluginId: { type: 'string', description: 'Stable dynamic Plugin ID to stop.' },
+        },
+      },
+      output: {
+        schema: objectSchema({ pluginId: { type: 'string' } }, ['pluginId']),
+        render: (_args, value) => textBlock(`Stopped dynamic Plugin ${value.pluginId} (if it was running).`),
+      },
+      execute: async (args, exec) => {
+        const receipt = await runner.stop(requireAgent(exec), args.pluginId)
+        if (!receipt.ok && receipt.reason !== 'not-running') throw new Error(receipt.message)
+        return { pluginId: args.pluginId }
+      },
+    })
+
+    registerTool(ctx, {
+      name: 'cordis_undefine',
+      description: 'Permanently remove a dynamic Plugin owned by the current Session. If it is running or awaiting approval, first stop it and cancel the request, then delete every Package, grant, and version pointer. After this returns, its pluginId, packageIds, @ reference, and Package business views are invalid; historical cards retain only a "Plugin removed" record. Do not call this Tool when versions must remain available for restart or rollback; use cordis_stop instead.',
+      parameters: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['pluginId'],
+        properties: {
+          pluginId: { type: 'string', description: 'Stable dynamic Plugin ID to remove permanently.' },
+        },
+      },
+      output: {
+        schema: objectSchema(
+          {
+            pluginId: { type: 'string' },
+            wasRunning: { type: 'boolean' },
+          },
+          ['pluginId']
+        ),
+        render: (_args, value) => textBlock(`Removed dynamic Plugin ${value.pluginId}${value.wasRunning ? ' (was running)' : ''} and all of its Packages.`),
+      },
+      execute: async (args, exec) => {
+        const receipt = await runner.undefine(requireAgent(exec), args.pluginId)
+        if (!receipt.ok) throw new Error(receipt.message)
+        return { pluginId: args.pluginId, wasRunning: Boolean(receipt.wasRunning) }
+      },
+    })
+  })
+
   // ── desktop screenshot ────────────────────────────────────────────────────
   registerTool(ctx, {
     name: 'content_screenshot',
