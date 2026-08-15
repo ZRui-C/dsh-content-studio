@@ -118,17 +118,27 @@ content_review_status
 ├── cordis.patch.yml        # bundle 层：宿主行 + MCP 行
 ├── preset.yml              # 方式 B 的显示元数据
 ├── agent.cordis.yml        # 方式 B 的预设组合
-├── src/index.js            # 宿主插件 —— 注册全部 10 个工具
+├── src/index.js            # 宿主插件 —— 注册全部 15 个工具（内容工作室 + 审阅 + cordis 动态插件）
 ├── src/lib/                # screenshot / record / cards / template / devto / util / review
 ├── vendor/marked.umd.cjs   # vendored Markdown 解析器（零运行时依赖）
 ├── plugins/content-review-panel/  # 审阅面板动态插件模板
+├── scripts/verify-panel.sh       # 审阅面板四层验证门
 └── skills/xhs-content-studio/     # 端到端工作流 Skill
 ```
+
+## 运维与验证
+
+审阅面板跨四个持久化层：profile 组合树（宿主行）→ boot 图（`dsh.client` 浏览器 bundle）→ 面板 API 路由 → 磁盘草稿。任何一层断裂都会表现为"面板不见了"。**断言面板可用之前必须先跑验证门**：
+
+```bash
+DSH_DEPLOY=/path/to/dsh ./scripts/verify-panel.sh
+```
+
+五层全 PASS 才允许声称面板可见；有 FAIL 时按脚本提示修复并重启 DSH 后重跑。已知的两个启动竞态（`webServer` / `dynamicCordisRunner` 晚于本插件挂载）已用 `ctx.interval` 轮询兜底，路由与工具会等 service 就位后自动注册。
 
 ## Roadmap
 
 - [x] 宿主侧 bundle 化 —— `dsh plugin add` 已在无头实例端到端验证
-- [ ] 审阅面板静态化 —— 声明 `dsh.client`，经官方 client-modules 管线发布浏览器构建产物，数据通道改为 session projection（host→client）+ 命令（client→host）
 - [ ] Linux / Windows 截屏录屏适配
 - [ ] dsh-plugin 主题收录
 
