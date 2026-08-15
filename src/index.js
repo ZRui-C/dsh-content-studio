@@ -89,9 +89,11 @@ export function apply(ctx) {
         // Card PNG stream: /content-studio-api/card-image/<cardId> (binary, not JSON).
         // The panel renders the real rendered images; the ?rev= query is ignored
         // by the matcher and only busts the browser cache on re-renders.
+        // NOTE: prefix must NOT carry a trailing slash — the webserver matches
+        // `pathname.startsWith(prefix + '/')`, so a trailing slash never matches.
         disposers.push(webServer.register({
           kind: 'prefix',
-          path: '/content-studio-api/card-image/',
+          path: '/content-studio-api/card-image',
           handler: (req, res) => {
             try {
               const pathname = new URL(req.url ?? '/', 'http://x').pathname
