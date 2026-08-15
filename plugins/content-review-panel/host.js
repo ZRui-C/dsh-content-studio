@@ -31,7 +31,7 @@ return {
     async function writeDraft(draft) {
       if (fs === undefined) return
       const target = await fs.resolve(DRAFT_PATH)
-      await fs.writeText(target, JSON.stringify(draft, null, 2))
+      await fs.writeText(target, JSON.stringify(draft, null, 2), undefined, undefined, { mode: 'danger-full-access' })
     }
 
     harness.handle('get-draft', async (args) => {
@@ -96,7 +96,7 @@ return {
           const value = args && args[name]
           if (typeof value === 'string' && value.trim() !== '') next[name] = value.trim()
         }
-        await fs.writeText(target, JSON.stringify(next, null, 2))
+        await fs.writeText(target, JSON.stringify(next, null, 2), undefined, undefined, { mode: 'danger-full-access' })
         return { ok: true, geminiSet: Boolean(next.geminiApiKey), devtoSet: Boolean(next.devtoApiKey) }
       } catch (error) {
         return { ok: false, error: String(error && error.message ? error.message : error) }
