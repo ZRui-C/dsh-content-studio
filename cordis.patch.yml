@@ -41,6 +41,9 @@
         env:
           PUPPETEER_EXECUTABLE_PATH: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
           PUPPETEER_SKIP_DOWNLOAD: 'true'
+          # 登录必须弹窗扫码：xhs-mcp 默认 XHS_HEADLESS=true（无头，无二维码）。
+          XHS_HEADLESS: 'false'
+          XHS_LOGIN_TIMEOUT: '600'
         failOnStartupError: false
         toolCallTimeoutMs: 180000
 

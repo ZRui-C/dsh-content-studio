@@ -39,17 +39,30 @@ if [ -n "${REV:-}" ]; then
   fi
 fi
 
-# ── 层 4: 面板 API 路由应答（POST 必须返回 JSON 而非 SPA 兜底 HTML） ────────
+# ── 层 4: 面板 API 路由应答（POST 必须返回 JSON 草稿而非 SPA 兜底 HTML） ────
 RESP=$(curl -s -X POST -H 'content-type: application/json' -d '{}' "$GUI_URL/content-studio-api/get-draft")
-if echo "$RESP" | grep -q '"ok":true'; then
-  STATUS=$(echo "$RESP" | python3 -c "import json,sys; print(json.load(sys.stdin).get('status'))" 2>/dev/null)
+if echo "$RESP" | grep -qE '^\{.*"status"|^null$'; then
+  STATUS=$(echo "$RESP" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('status') if d else 'none')" 2>/dev/null)
   ok "layer4: /content-studio-api/get-draft answers JSON (draft status: ${STATUS:-?})"
 else
   fail "layer4: /content-studio-api/get-draft did not answer with JSON (routes not registered — webServer race?)"
 fi
 
-# ── 层 5: 草稿文件可读 ─────────────────────────────────────────────────────
+# ── 层 4b: 卡片图片路由（面板显示真实渲染图，非本地路径） ──────────────────
 DRAFT="${DSH_HOME:-$HOME/.dsh}/content-studio-output/review/draft.json"
+CARD_ID=$(python3 -c "import json,sys; d=json.load(open('$DRAFT')); c=d.get('cards') or []; print(c[0]['id'] if c else '')" 2>/dev/null)
+if [ -n "$CARD_ID" ]; then
+  IMG=$(curl -s -o /dev/null -w '%{http_code}' "$GUI_URL/content-studio-api/card-image/$CARD_ID")
+  if [ "$IMG" = "200" ]; then
+    ok "layer4b: /content-studio-api/card-image/<id> serves 200"
+  else
+    fail "layer4b: card-image route returned HTTP $IMG"
+  fi
+else
+  ok "layer4b: no cards in draft yet — route check skipped"
+fi
+
+# ── 层 5: 草稿文件可读 ─────────────────────────────────────────────────────
 if [ -r "$DRAFT" ]; then
   CARDS=$(python3 -c "import json; print(len(json.load(open('$DRAFT')).get('cards', [])))" 2>/dev/null)
   ok "layer5: draft.json readable (cards: ${CARDS:-?})"

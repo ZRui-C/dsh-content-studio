@@ -10,7 +10,8 @@ import { screenshotDesktop } from './lib/screenshot.js'
 import { recordScreen, listDevices } from './lib/record.js'
 import { mdToCards, mdToHtml, findChrome } from './lib/cards.js'
 import { publishDevto } from './lib/devto.js'
-import { reviewOpen, reviewStatus, reviewRefresh, reviewClose, reviewGetRaw, reviewSavePanel, reviewDecidePanel } from './lib/review.js'
+import { publishMedium } from './lib/medium.js'
+import { reviewOpen, reviewStatus, reviewRefresh, reviewClose, reviewGetRaw, reviewSavePanel, reviewDecidePanel, reviewCardImage } from './lib/review.js'
 import { keysStatus, saveKeys } from './lib/keys.js'
 import { textToImage } from './lib/text2img.js'
 import { objectSchema, textBlock, REGION_SCHEMA } from './lib/util.js'
@@ -85,6 +86,33 @@ export function apply(ctx) {
           saveKeys(body || {})
           return keysStatus()
         }) }))
+        // Card PNG stream: /content-studio-api/card-image/<cardId> (binary, not JSON).
+        // The panel renders the real rendered images; the ?rev= query is ignored
+        // by the matcher and only busts the browser cache on re-renders.
+        disposers.push(webServer.register({
+          kind: 'prefix',
+          path: '/content-studio-api/card-image/',
+          handler: (req, res) => {
+            try {
+              const pathname = new URL(req.url ?? '/', 'http://x').pathname
+              const id = decodeURIComponent(pathname.slice('/content-studio-api/card-image/'.length))
+              const found = reviewCardImage(id)
+              if (!found.ok) {
+                res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' })
+                res.end('card not found')
+                return
+              }
+              res.writeHead(200, {
+                'Content-Type': found.mime,
+                'Cache-Control': 'no-cache',
+              })
+              res.end(found.buffer)
+            } catch (error) {
+              res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' })
+              res.end(String((error && error.message) || error))
+            }
+          },
+        }))
       } catch (error) {
         // 路由已注册（同进程重复挂载）时忽略，留日志可查
         for (const dispose of disposers) { try { dispose() } catch (e2) { /* ignore */ } }
@@ -615,6 +643,49 @@ export function apply(ctx) {
     execute: (args) => publishDevto(args),
   })
 
+  // ── Medium publishing ──────────────────────────────────────────────────────
+  registerTool(ctx, {
+    name: 'content_publish_medium',
+    description:
+      'Create a Medium post via the official API: POST https://api.medium.com/v1/users/{userId}/posts. ' +
+      'published=false saves a draft for review; published=true publishes immediately. Max 5 tags. ' +
+      'API key: pass api_key or save a Medium integration token from the panel 设置 page (create one at https://medium.com/me/settings -> Integration tokens).',
+    parameters: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['title', 'body_markdown'],
+      properties: {
+        title: { type: 'string', description: 'Post title.' },
+        body_markdown: { type: 'string', description: 'Full post body in Markdown.' },
+        tags: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Up to 5 tags, e.g. ["ai", "automation", "productivity"].',
+        },
+        canonical_url: { type: 'string', description: 'Optional canonical URL for cross-posting.' },
+        published: { type: 'boolean', description: 'true = publish now; false = save draft (default).' },
+        api_key: { type: 'string', description: 'Optional Medium integration token; falls back to the saved panel key or MEDIUM_TOKEN env.' },
+      },
+    },
+    output: {
+      schema: objectSchema(
+        {
+          ok: { type: 'boolean' },
+          published: { type: 'boolean' },
+          mediumUrl: NULLABLE_STRING,
+          note: { type: 'string' },
+        },
+        ['ok']
+      ),
+      render: (_args, value) =>
+        textBlock(
+          `Medium ${value.ok ? (value.published ? '已发布' : '草稿已保存') : '失败'}${value.mediumUrl ? ': ' + value.mediumUrl : ''}\n` + (value.note ?? '')
+        ),
+    },
+    execute: (args) => publishMedium(args),
+    timeoutMs: 90000,
+  })
+
   // ── capture device diagnostics ────────────────────────────────────────────
   registerTool(ctx, {
     name: 'content_capture_devices',
@@ -754,7 +825,7 @@ export function apply(ctx) {
         if (value.status === 'none') text = '当前没有进行中的图文审阅。'
         else if (value.status === 'draft') text = '审阅进行中，用户尚未操作。请结束本轮，等用户看完面板后说「继续」。'
         else if (value.status === 'edited') text = '用户修改了草稿。请用返回的 markdown/style/layout/cover/footer/bgImage 重新调用 content_md_to_cards 渲染，然后调用 content_review_refresh 更新。' + (value.humanNote ? '\n用户留言：' + value.humanNote : '')
-        else if (value.status === 'approved') text = '✅ 用户已批准发布。用面板里的发布文案发布（标题与正文独立于图片内容）：\n发布标题：' + value.publishTitle + '\n发布正文：' + value.publishBody + '\nXHS 用 mcp__xhs__xhs_publish_content（title=发布标题，content=发布正文，media_paths 传卡片路径），dev.to 用 content_publish_devto。发布完成后调用 content_review_close。'
+        else if (value.status === 'approved') text = '✅ 用户已批准发布。用面板里的发布文案发布（标题与正文独立于图片内容）：\n发布标题：' + value.publishTitle + '\n发布正文：' + value.publishBody + '\nXHS 用 mcp__xhs__xhs_publish_content（title=发布标题，content=发布正文，media_paths 传卡片路径），dev.to 用 content_publish_devto，Medium 用 content_publish_medium。发布完成后调用 content_review_close。'
         else text = '❌ 用户打回。意见：' + (value.humanNote || '(无)') + '\n请按意见修改 markdown，重新渲染后调用 content_review_refresh，再次等待审阅。'
         return textBlock(text)
       },

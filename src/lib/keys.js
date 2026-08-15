@@ -26,7 +26,7 @@ export function getKey(name) {
 /** Merge non-empty string values for the known key names; never clears existing ones. */
 export function saveKeys(patch) {
   const next = loadKeys()
-  for (const name of ['geminiApiKey', 'devtoApiKey']) {
+  for (const name of ['geminiApiKey', 'devtoApiKey', 'mediumToken']) {
     const value = patch && patch[name]
     if (typeof value === 'string' && value.trim() !== '') next[name] = value.trim()
   }
@@ -41,5 +41,6 @@ export function keysStatus() {
   return {
     geminiSet: Boolean(keys.geminiApiKey),
     devtoSet: Boolean(keys.devtoApiKey),
+    mediumSet: Boolean(keys.mediumToken),
   }
 }

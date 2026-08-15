@@ -4,7 +4,7 @@
 
 [English](README.en.md) · [dsh-plugin 主题](https://github.com/topics/dsh-plugin)
 
-截屏、录屏、Markdown 渲染小红书图文、dev.to 发布、发布前人工审阅 —— 一次安装、十个工具，告别每次现写脚本。
+截屏、录屏、Markdown 渲染小红书图文、dev.to / Medium 发布、发布前人工审阅 —— 一次安装、十六个工具，告别每次现写脚本。
 
 ## 特性
 
@@ -14,6 +14,7 @@
 - 🃏 `content_md_to_cards` —— Markdown → 小红书图文卡片（Chrome 无头渲染）：封面卡 + 按 H1/H2 分节成卡，1242×1660（3:4），**5 套配色 × 4 种版式**，支持 `![描述](路径)` 插图与带可读性遮罩的背景图
 - 🌐 `content_md_to_html` —— 自包含排版 HTML，用于预览、CSDN、公众号粘贴
 - 📤 `content_publish_devto` —— dev.to（Forem）官方 API 发布（草稿/直发）
+- 📤 `content_publish_medium` —— Medium 官方 API 发布（草稿/直发）
 - 👀 `content_review_open / status / refresh / close` —— 持久化的人工审阅闸门：草稿落盘 `~/.dsh/content-studio-output/review/draft.json`，浏览器浮动审阅面板（**审阅 / 发布 / 设置** 三个页签）**实时预览**卡片，用户可改文字、配色、版式与发布文案，然后批准或打回
 - 🔌 Playwright MCP（`mcp__playwright__*`）—— 网页截图、会话录屏、UI 自动化（系统 Chrome）
 - 📕 xhs-mcp（`mcp__xhs__*`）—— 小红书登录、图文/视频发布、搜索
@@ -54,6 +55,7 @@ rsync -a ~/Projects/dsh-content-studio/ ~/.dsh/.agent-presets/content-studio/
 | `content_text_to_image` | 文本生图（Nano Banana），支持 1:1/3:4/4:3/9:16/16:9 |
 | `content_md_to_html` | Markdown → 排版 HTML（自包含） |
 | `content_publish_devto` | dev.to API 发布 |
+| `content_publish_medium` | Medium API 发布 |
 | `content_review_open / status / refresh / close` | 发布前持久化人工审阅 |
 | `mcp__playwright__*` | 网页截图 / 录屏 / UI 自动化 |
 | `mcp__xhs__*` | 小红书登录 / 发布 / 搜索 |
@@ -92,6 +94,7 @@ content_review_status
 | --- | --- | --- |
 | 小红书 XHS | `mcp__xhs__*` | 标题 ≤ 20 字、正文 ≤ 1000、1–18 图（3:4 最佳） |
 | dev.to | `content_publish_devto` | 官方 API，≤ 4 tags |
+| Medium | `content_publish_medium` | 官方 API，≤ 5 tags |
 | 掘金 Juejin | 可选 `mcp-juejin` 行 / Playwright UI 自动化 | 需本地起 JueJin-MCP 服务 |
 | CSDN / 公众号 | `content_md_to_html` 粘贴 | 无公开 API |
 | V2EX | bash + token API | 宣传帖 |
@@ -118,7 +121,7 @@ content_review_status
 ├── cordis.patch.yml        # bundle 层：宿主行 + MCP 行
 ├── preset.yml              # 方式 B 的显示元数据
 ├── agent.cordis.yml        # 方式 B 的预设组合
-├── src/index.js            # 宿主插件 —— 注册全部 15 个工具（内容工作室 + 审阅 + cordis 动态插件）
+├── src/index.js            # 宿主插件 —— 注册全部 16 个工具（内容工作室 + 审阅 + cordis 动态插件）
 ├── src/lib/                # screenshot / record / cards / template / devto / util / review
 ├── vendor/marked.umd.cjs   # vendored Markdown 解析器（零运行时依赖）
 ├── plugins/content-review-panel/  # 审阅面板动态插件模板

@@ -66,6 +66,21 @@ export function reviewGetRaw() {
   return readDraft()
 }
 
+/** Serve one card PNG by id (the panel shows the real rendered images, not approximations). */
+export function reviewCardImage(cardId) {
+  const d = readDraft()
+  const card = d === null ? null : (Array.isArray(d.cards) ? d.cards : []).find((c) => c && c.id === cardId)
+  if (card === null || card === undefined || typeof card.path !== 'string' || card.path === '') {
+    return { ok: false }
+  }
+  try {
+    const buffer = readFileSync(card.path)
+    return { ok: true, mime: mimeOf(card.path), buffer }
+  } catch {
+    return { ok: false }
+  }
+}
+
 /** Panel-side save: merge editable fields, status -> edited, revision +1. */
 export function reviewSavePanel(patch) {
   const d = readDraft()
